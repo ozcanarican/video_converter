@@ -131,8 +131,8 @@ var startUp = function () { return __awaiter(void 0, void 0, void 0, function ()
                     }
                 });
                 log("**".concat(newFiles.length, "** new files found."));
-                sendMessage();
                 if (newFiles.length > 0) {
+                    sendMessage();
                     combined = files.concat(newFiles);
                     fs.writeFileSync("files.json", JSON.stringify(combined));
                     convertNews();

@@ -73,8 +73,8 @@ const startUp = async () => {
   })
   log(`**${newFiles.length}** new files found.`)
   
-  sendMessage()
   if (newFiles.length > 0) {
+    sendMessage()
     let combined = files.concat(newFiles)
     fs.writeFileSync("files.json", JSON.stringify(combined))
     convertNews()
