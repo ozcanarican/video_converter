@@ -8,7 +8,7 @@ import  {DateTime}  from "luxon";
 const videoFolder = "D:/multimedia"
 let allowedType = [".mp4",".webm",".mkv",".avi"]
 var isWin = process.platform === "win32";
-const deleteOldFile = false
+const deleteOldFile = true
 
 //variables
 var files: string[] = require('./files.json')
@@ -74,7 +74,7 @@ const startUp = async () => {
   log(`**${newFiles.length}** new files found.`)
   
   if (newFiles.length > 0) {
-    sendMessage()
+    sendMessage("MediaServer New Files")
     let combined = files.concat(newFiles)
     fs.writeFileSync("files.json", JSON.stringify(combined))
     convertNews()
@@ -108,17 +108,17 @@ const convertNews = async () => {
     addToData(output)
     let fark = DateTime.now().diff(startTime)
     log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
-    sendMessage()
+    sendMessage("MediaServer Transcode","file_folder")
   })
 }
 
-const sendMessage = () => {
+const sendMessage = (title:string, icon:string='video_camera') => {
   fetch('https://ntfy.sh/55oarican_network', {
     method: 'POST',
     body: msgbody,
     headers: {
-      'Title': 'MediaServer Transcode',
-      'Tags': 'video_camera',
+      'Title': title,
+      'Tags': icon,
       'Markdown': 'yes'
     }
   }).then(async (res) => {

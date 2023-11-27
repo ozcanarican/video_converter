@@ -45,7 +45,7 @@ var luxon_1 = require("luxon");
 var videoFolder = "D:/multimedia";
 var allowedType = [".mp4", ".webm", ".mkv", ".avi"];
 var isWin = process.platform === "win32";
-var deleteOldFile = false;
+var deleteOldFile = true;
 //variables
 var files = require('./files.json');
 var scannerDirs = [];
@@ -132,7 +132,7 @@ var startUp = function () { return __awaiter(void 0, void 0, void 0, function ()
                 });
                 log("**".concat(newFiles.length, "** new files found."));
                 if (newFiles.length > 0) {
-                    sendMessage();
+                    sendMessage("MediaServer New Files");
                     combined = files.concat(newFiles);
                     fs.writeFileSync("files.json", JSON.stringify(combined));
                     convertNews();
@@ -177,7 +177,7 @@ var convertNews = function () { return __awaiter(void 0, void 0, void 0, functio
                         addToData(output);
                         fark = luxon_1.DateTime.now().diff(startTime);
                         log("Conversation has done for ".concat(newfile, " (").concat(fark.toFormat("mm:ss"), ")"));
-                        sendMessage();
+                        sendMessage("MediaServer Transcode", "file_folder");
                         return [2 /*return*/];
                 }
             });
@@ -185,13 +185,14 @@ var convertNews = function () { return __awaiter(void 0, void 0, void 0, functio
         return [2 /*return*/];
     });
 }); };
-var sendMessage = function () {
+var sendMessage = function (title, icon) {
+    if (icon === void 0) { icon = 'video_camera'; }
     fetch('https://ntfy.sh/55oarican_network', {
         method: 'POST',
         body: msgbody,
         headers: {
-            'Title': 'MediaServer Transcode',
-            'Tags': 'video_camera',
+            'Title': title,
+            'Tags': icon,
             'Markdown': 'yes'
         }
     }).then(function (res) { return __awaiter(void 0, void 0, void 0, function () {
