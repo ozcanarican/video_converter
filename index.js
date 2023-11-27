@@ -40,11 +40,15 @@ var readdir = require("node:fs/promises").readdir;
 var fs = require("fs");
 var path = require("path");
 var exec = require('child_process').exec;
+var luxon_1 = require("luxon");
 //settings
-var allowedType = [".mp4", ".webm", ".mkv"];
+var videoFolder = "D:/multimedia";
+var allowedType = [".mp4", ".webm", ".mkv", ".avi"];
 var isWin = process.platform === "win32";
+var deleteOldFile = false;
 //variables
 var files = require('./files.json');
+var scannerDirs = [];
 var scannedFiles = [];
 var newFiles = [];
 var msgbody = "";
@@ -62,28 +66,41 @@ var log = function (msg) {
     console.log(msg);
     msgbody += msg + "\n";
 };
+var addToData = function (file) { return __awaiter(void 0, void 0, void 0, function () {
+    var filesData;
+    return __generator(this, function (_a) {
+        filesData = JSON.parse(fs.readFileSync('./files.json', 'utf8'));
+        if (!filesData.includes(file)) {
+            filesData.push(file);
+            fs.writeFileSync("files.json", JSON.stringify(filesData));
+        }
+        return [2 /*return*/];
+    });
+}); };
 function getFiles(dir) {
     return __awaiter(this, void 0, void 0, function () {
         var files;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, readdir(dir, { recursive: true, withFileTypes: true })];
+                case 0:
+                    if (scannerDirs.includes(dir)) {
+                        return [2 /*return*/];
+                    }
+                    scannerDirs.push(dir);
+                    return [4 /*yield*/, readdir(dir, { recursive: true, withFileTypes: true })];
                 case 1:
                     files = _a.sent();
                     return [4 /*yield*/, Promise.all(files.map(function (file) { return __awaiter(_this, void 0, void 0, function () {
-                            var d;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
-                                        if (!file.isFile()) return [3 /*break*/, 1];
+                                        if (!(file.isFile() && !scannedFiles.includes((path.join(file.path, file.name))))) return [3 /*break*/, 1];
                                         if (allowedType.includes(path.extname(file.name))) {
-                                            scannedFiles.push(path.join(dir, file.name));
+                                            scannedFiles.push(path.join(file.path, file.name));
                                         }
                                         return [3 /*break*/, 3];
-                                    case 1:
-                                        d = path.join(dir, file.name);
-                                        return [4 /*yield*/, getFiles(d)];
+                                    case 1: return [4 /*yield*/, getFiles(file.path)];
                                     case 2:
                                         _a.sent();
                                         _a.label = 3;
@@ -104,7 +121,7 @@ var startUp = function () { return __awaiter(void 0, void 0, void 0, function ()
         switch (_a.label) {
             case 0:
                 log("Starting a scan");
-                return [4 /*yield*/, getFiles(__dirname)];
+                return [4 /*yield*/, getFiles(videoFolder)];
             case 1:
                 _a.sent();
                 log("Scan has done with **".concat(scannedFiles.length, "** files."));
@@ -114,41 +131,52 @@ var startUp = function () { return __awaiter(void 0, void 0, void 0, function ()
                     }
                 });
                 log("**".concat(newFiles.length, "** new files found."));
+                sendMessage();
                 if (newFiles.length > 0) {
                     combined = files.concat(newFiles);
                     fs.writeFileSync("files.json", JSON.stringify(combined));
+                    convertNews();
                 }
-                sendMessage();
-                convertNews();
                 return [2 /*return*/];
         }
     });
 }); };
 var convertNews = function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
+        console.log("Conversation has been started");
         newFiles.map(function (file) { return __awaiter(void 0, void 0, void 0, function () {
-            var p, container, newfile, output, cmd, cmd_1, cmd_2;
+            var startTime, p, container, newfile, output, temp, cmd, fark;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        startTime = luxon_1.DateTime.now();
+                        console.log("Converting " + file);
                         p = path.dirname(file);
                         container = path.extname(file);
                         newfile = (path.basename(file)).replace(container, "") + ".mp4";
                         output = path.join(p, newfile);
+                        temp = path.join(p, "temp.mp4");
                         cmd = "";
                         if (isWin) {
-                            cmd_1 = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(output, "\" -e x264 --preset \"Very Fast 1080p30\"");
+                            cmd = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(temp, "\" -e x264 --preset \"Very Fast 1080p30\"");
                         }
                         else {
-                            cmd_2 = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(output, "\" -e x264 --preset \"Very Fast 1080p30\"");
+                            cmd = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(temp, "\" -e x264 --preset \"Very Fast 1080p30\"");
                         }
-                        //let cmd = `ffmpeg -i "${file}" -c:v libx264 -b:v 2600k -vf format=yuv420p -movflags +faststart -c:a aac -b:a 128k "${output}"`
                         return [4 /*yield*/, execPromise(cmd)];
                     case 1:
-                        //let cmd = `ffmpeg -i "${file}" -c:v libx264 -b:v 2600k -vf format=yuv420p -movflags +faststart -c:a aac -b:a 128k "${output}"`
                         _a.sent();
-                        fs.unlinkSync(file);
-                        log("Conversation has done for ".concat(newfile));
+                        if (deleteOldFile) {
+                            fs.unlinkSync(file);
+                        }
+                        else {
+                            fs.renameSync(file, file + ".old");
+                            addToData(file + ".old");
+                        }
+                        fs.renameSync(temp, output);
+                        addToData(output);
+                        fark = luxon_1.DateTime.now().diff(startTime);
+                        log("Conversation has done for ".concat(newfile, " (").concat(fark.toFormat("mm:ss"), ")"));
                         sendMessage();
                         return [2 /*return*/];
                 }

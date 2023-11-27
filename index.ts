@@ -2,15 +2,19 @@ const { readdir } = require("node:fs/promises");
 import * as fs from 'fs';
 import * as path from "path"
 var exec = require('child_process').exec;
+import  {DateTime}  from "luxon";
 
 //settings
-let allowedType = [".mp4",".webm",".mkv"]
+const videoFolder = "D:/multimedia"
+let allowedType = [".mp4",".webm",".mkv",".avi"]
 var isWin = process.platform === "win32";
+const deleteOldFile = false
 
 //variables
-var files: String[] = require('./files.json')
-let scannedFiles: String[] = []
-let newFiles: String[] = []
+var files: string[] = require('./files.json')
+let scannerDirs:string[] = []
+let scannedFiles: string[] = []
+let newFiles: string[] = []
 let msgbody = "";
 
 
@@ -25,21 +29,34 @@ const execPromise = function(cmd:string) {
   });
 }
 
+
 const log = (msg: string) => {
   console.log(msg)
   msgbody += msg + "\n"
 }
 
+const addToData = async(file:string) => {
+  let filesData = JSON.parse(fs.readFileSync('./files.json', 'utf8'));
+  if (!filesData.includes(file)) {
+    filesData.push(file)
+    fs.writeFileSync("files.json", JSON.stringify(filesData))
+  }
+}
+
+
 async function getFiles(dir: string) {
+  if(scannerDirs.includes(dir)) {
+    return
+  }
+  scannerDirs.push(dir)
   const files: fs.Dirent[] = await readdir(dir, { recursive: true, withFileTypes: true });
   await Promise.all(files.map(async (file) => {
-    if (file.isFile()) {
+    if (file.isFile() && !scannedFiles.includes((path.join(file.path, file.name)))) {
       if (allowedType.includes(path.extname(file.name))) {
-        scannedFiles.push(path.join(dir, file.name))
+        scannedFiles.push(path.join(file.path, file.name))
       }
     } else {
-      let d = path.join(dir, file.name)
-      await getFiles(d)
+      await getFiles(file.path)
     }
 
   }))
@@ -47,7 +64,7 @@ async function getFiles(dir: string) {
 
 const startUp = async () => {
   log("Starting a scan")
-  await getFiles(__dirname)
+  await getFiles(videoFolder)
   log(`Scan has done with **${scannedFiles.length}** files.`)
   scannedFiles.map((file) => {
     if (!files.includes(file)) {
@@ -55,31 +72,42 @@ const startUp = async () => {
     }
   })
   log(`**${newFiles.length}** new files found.`)
+  
+  sendMessage()
   if (newFiles.length > 0) {
     let combined = files.concat(newFiles)
     fs.writeFileSync("files.json", JSON.stringify(combined))
+    convertNews()
   }
-  sendMessage()
-  convertNews()
 }
 
 const convertNews = async () => {
+  console.log("Conversation has been started")
   newFiles.map(async(file)=>{
+    let startTime = DateTime.now()
+    console.log("Converting " + file)
     let p = path.dirname(file as string)
     let container = path.extname(file as string)
     let newfile = (path.basename(file as string)).replace(container,"") + ".mp4"
     let output = path.join(p,newfile)
+    let temp = path.join(p,"temp.mp4")
     let cmd = ""
     if(isWin) {
-      let cmd = `HandBrakeCLI -i "${file}" -o "${output}" -e x264 --preset "Very Fast 1080p30"`
+      cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
     } else {
-      let cmd = `HandBrakeCLI -i "${file}" -o "${output}" -e x264 --preset "Very Fast 1080p30"`
+      cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
     }
-    
-    //let cmd = `ffmpeg -i "${file}" -c:v libx264 -b:v 2600k -vf format=yuv420p -movflags +faststart -c:a aac -b:a 128k "${output}"`
     await execPromise(cmd)
-    fs.unlinkSync(file as string);
-    log(`Conversation has done for ${newfile}`)
+    if(deleteOldFile) {
+      fs.unlinkSync(file as string);
+    } else {
+      fs.renameSync(file,file + ".old")
+      addToData(file + ".old")
+    }
+    fs.renameSync(temp,output)
+    addToData(output)
+    let fark = DateTime.now().diff(startTime)
+    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
     sendMessage()
   })
 }
