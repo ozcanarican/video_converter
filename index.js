@@ -41,6 +41,7 @@ var fs = require("fs");
 var path = require("path");
 var exec = require('child_process').exec;
 var luxon_1 = require("luxon");
+var child_process_1 = require("child_process");
 //settings
 var videoFolder = "D:/multimedia";
 var allowedType = [".mp4", ".webm", ".mkv", ".avi"];
@@ -52,16 +53,6 @@ var scannerDirs = [];
 var scannedFiles = [];
 var newFiles = [];
 var msgbody = "";
-var execPromise = function (cmd) {
-    return new Promise(function (resolve, reject) {
-        log("Executing: \"".concat(cmd, "\""));
-        exec(cmd, function (err, stdout) {
-            if (err)
-                return reject(err);
-            resolve(stdout);
-        });
-    });
-};
 var log = function (msg) {
     console.log(msg);
     msgbody += msg + "\n";
@@ -95,7 +86,7 @@ function getFiles(dir) {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
-                                        if (!(file.isFile() && !scannedFiles.includes((path.join(file.path, file.name))))) return [3 /*break*/, 1];
+                                        if (!(file.isFile() && !scannedFiles.includes((path.join(file.path, file.name))) && file.name != "temp.mp4")) return [3 /*break*/, 1];
                                         if (allowedType.includes(path.extname(file.name))) {
                                             scannedFiles.push(path.join(file.path, file.name));
                                         }
@@ -143,46 +134,49 @@ var startUp = function () { return __awaiter(void 0, void 0, void 0, function ()
 }); };
 var convertNews = function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
-        console.log("Conversation has been started");
-        newFiles.map(function (file) { return __awaiter(void 0, void 0, void 0, function () {
-            var startTime, p, container, newfile, output, temp, cmd, fark;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        startTime = luxon_1.DateTime.now();
-                        console.log("Converting " + file);
-                        p = path.dirname(file);
-                        container = path.extname(file);
-                        newfile = (path.basename(file)).replace(container, "") + ".mp4";
-                        output = path.join(p, newfile);
-                        temp = path.join(p, "temp.mp4");
-                        cmd = "";
-                        if (isWin) {
-                            cmd = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(temp, "\" -e x264 --preset \"Very Fast 1080p30\"");
-                        }
-                        else {
-                            cmd = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(temp, "\" -e x264 --preset \"Very Fast 1080p30\"");
-                        }
-                        return [4 /*yield*/, execPromise(cmd)];
-                    case 1:
-                        _a.sent();
-                        if (deleteOldFile) {
-                            fs.unlinkSync(file);
-                        }
-                        else {
-                            fs.renameSync(file, file + ".old");
-                            addToData(file + ".old");
-                        }
-                        fs.renameSync(temp, output);
-                        addToData(output);
-                        fark = luxon_1.DateTime.now().diff(startTime);
-                        log("Conversation has done for ".concat(newfile, " (").concat(fark.toFormat("mm:ss"), ")"));
-                        sendMessage("MediaServer Transcode", "file_folder");
-                        return [2 /*return*/];
-                }
-            });
-        }); });
-        return [2 /*return*/];
+        switch (_a.label) {
+            case 0:
+                console.log("Conversation has been started");
+                return [4 /*yield*/, Promise.all(newFiles.map(function (file) { return __awaiter(void 0, void 0, void 0, function () {
+                        var startTime, p, container, newfile, output, temp, cmd, fark;
+                        return __generator(this, function (_a) {
+                            startTime = luxon_1.DateTime.now();
+                            console.log("Converting " + file);
+                            p = path.dirname(file);
+                            container = path.extname(file);
+                            newfile = (path.basename(file)).replace(container, "") + ".mp4";
+                            output = path.join(p, newfile);
+                            temp = path.join(p, "temp.mp4");
+                            if (fs.existsSync(temp)) {
+                                fs.rmSync(temp);
+                            }
+                            cmd = "";
+                            if (isWin) {
+                                cmd = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(temp, "\" -e x264 --preset \"Very Fast 1080p30\"");
+                            }
+                            else {
+                                cmd = "HandBrakeCLI -i \"".concat(file, "\" -o \"").concat(temp, "\" -e x264 --preset \"Very Fast 1080p30\"");
+                            }
+                            (0, child_process_1.execSync)(cmd);
+                            if (deleteOldFile) {
+                                fs.unlinkSync(file);
+                            }
+                            else {
+                                fs.renameSync(file, file + ".old");
+                                addToData(file + ".old");
+                            }
+                            fs.renameSync(temp, output);
+                            addToData(output);
+                            fark = luxon_1.DateTime.now().diff(startTime);
+                            log("Conversation has done for ".concat(newfile, " (").concat(fark.toFormat("mm:ss"), ")"));
+                            sendMessage("MediaServer Transcode", "file_folder");
+                            return [2 /*return*/];
+                        });
+                    }); }))];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
     });
 }); };
 var sendMessage = function (title, icon) {

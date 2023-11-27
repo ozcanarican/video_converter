@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from "path"
 var exec = require('child_process').exec;
 import  {DateTime}  from "luxon";
+import { execSync } from 'child_process';
 
 //settings
 const videoFolder = "D:/multimedia"
@@ -16,18 +17,6 @@ let scannerDirs:string[] = []
 let scannedFiles: string[] = []
 let newFiles: string[] = []
 let msgbody = "";
-
-
-
-const execPromise = function(cmd:string) {
-  return new Promise(function(resolve, reject) {
-    log(`Executing: "${cmd}"`)
-      exec(cmd, function(err:any, stdout:string) {
-          if (err) return reject(err);
-          resolve(stdout);
-      });
-  });
-}
 
 
 const log = (msg: string) => {
@@ -51,7 +40,7 @@ async function getFiles(dir: string) {
   scannerDirs.push(dir)
   const files: fs.Dirent[] = await readdir(dir, { recursive: true, withFileTypes: true });
   await Promise.all(files.map(async (file) => {
-    if (file.isFile() && !scannedFiles.includes((path.join(file.path, file.name)))) {
+    if (file.isFile() && !scannedFiles.includes((path.join(file.path, file.name))) && file.name != "temp.mp4") {
       if (allowedType.includes(path.extname(file.name))) {
         scannedFiles.push(path.join(file.path, file.name))
       }
@@ -83,33 +72,38 @@ const startUp = async () => {
 
 const convertNews = async () => {
   console.log("Conversation has been started")
-  newFiles.map(async(file)=>{
-    let startTime = DateTime.now()
-    console.log("Converting " + file)
-    let p = path.dirname(file as string)
-    let container = path.extname(file as string)
-    let newfile = (path.basename(file as string)).replace(container,"") + ".mp4"
-    let output = path.join(p,newfile)
-    let temp = path.join(p,"temp.mp4")
-    let cmd = ""
-    if(isWin) {
-      cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
-    } else {
-      cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
-    }
-    await execPromise(cmd)
-    if(deleteOldFile) {
-      fs.unlinkSync(file as string);
-    } else {
-      fs.renameSync(file,file + ".old")
-      addToData(file + ".old")
-    }
-    fs.renameSync(temp,output)
-    addToData(output)
-    let fark = DateTime.now().diff(startTime)
-    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
-    sendMessage("MediaServer Transcode","file_folder")
-  })
+  await Promise.all(
+    newFiles.map(async(file)=>{
+      let startTime = DateTime.now()
+      console.log("Converting " + file)
+      let p = path.dirname(file as string)
+      let container = path.extname(file as string)
+      let newfile = (path.basename(file as string)).replace(container,"") + ".mp4"
+      let output = path.join(p,newfile)
+      let temp = path.join(p,"temp.mp4")
+      if(fs.existsSync(temp)) {
+        fs.rmSync(temp)
+      }
+      let cmd = ""
+      if(isWin) {
+        cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
+      } else {
+        cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
+      }
+      execSync(cmd)
+      if(deleteOldFile) {
+        fs.unlinkSync(file as string);
+      } else {
+        fs.renameSync(file,file + ".old")
+        addToData(file + ".old")
+      }
+      fs.renameSync(temp,output)
+      addToData(output)
+      let fark = DateTime.now().diff(startTime)
+      log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
+      sendMessage("MediaServer Transcode","file_folder")
+    })
+  )
 }
 
 const sendMessage = (title:string, icon:string='video_camera') => {
