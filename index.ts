@@ -12,7 +12,8 @@ var isWin = process.platform === "win32";
 const deleteOldFile = true
 
 //variables
-var files: string[] = require('./files.json')
+let files_location = path.join(__dirname,'files.json')
+var files: string[] = require(files_location)
 let scannerDirs:string[] = []
 let scannedFiles: string[] = []
 let newFiles: string[] = []
@@ -25,10 +26,10 @@ const log = (msg: string) => {
 }
 
 const addToData = async(file:string) => {
-  let filesData = JSON.parse(fs.readFileSync('./files.json', 'utf8'));
+  let filesData = JSON.parse(fs.readFileSync(files_location, 'utf8'));
   if (!filesData.includes(file)) {
     filesData.push(file)
-    fs.writeFileSync("files.json", JSON.stringify(filesData))
+    fs.writeFileSync(files_location, JSON.stringify(filesData))
   }
 }
 
@@ -63,9 +64,9 @@ const startUp = async () => {
   log(`**${newFiles.length}** new files found.`)
   
   if (newFiles.length > 0) {
-    sendMessage("MediaServer New Files")
+    await sendMessage("MediaServer New Files")
     let combined = files.concat(newFiles)
-    fs.writeFileSync("files.json", JSON.stringify(combined))
+    fs.writeFileSync(files_location, JSON.stringify(combined))
     convertNews()
   }
 }
@@ -106,8 +107,8 @@ const convertNews = async () => {
   )
 }
 
-const sendMessage = (title:string, icon:string='video_camera') => {
-  fetch('https://ntfy.sh/55oarican_network', {
+const sendMessage = async(title:string, icon:string='video_camera') => {
+  let res = await fetch('https://ntfy.sh/55oarican_network', {
     method: 'POST',
     body: msgbody,
     headers: {
@@ -115,10 +116,9 @@ const sendMessage = (title:string, icon:string='video_camera') => {
       'Tags': icon,
       'Markdown': 'yes'
     }
-  }).then(async (res) => {
-    console.log(await res.text())
-    msgbody = ""
   })
+  console.log(await res.text())
+  msgbody = ""
 }
 
 startUp()

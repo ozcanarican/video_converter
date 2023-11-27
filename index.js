@@ -48,7 +48,8 @@ var allowedType = [".mp4", ".webm", ".mkv", ".avi"];
 var isWin = process.platform === "win32";
 var deleteOldFile = true;
 //variables
-var files = require('./files.json');
+var files_location = path.join(__dirname, 'files.json');
+var files = require(files_location);
 var scannerDirs = [];
 var scannedFiles = [];
 var newFiles = [];
@@ -60,10 +61,10 @@ var log = function (msg) {
 var addToData = function (file) { return __awaiter(void 0, void 0, void 0, function () {
     var filesData;
     return __generator(this, function (_a) {
-        filesData = JSON.parse(fs.readFileSync('./files.json', 'utf8'));
+        filesData = JSON.parse(fs.readFileSync(files_location, 'utf8'));
         if (!filesData.includes(file)) {
             filesData.push(file);
-            fs.writeFileSync("files.json", JSON.stringify(filesData));
+            fs.writeFileSync(files_location, JSON.stringify(filesData));
         }
         return [2 /*return*/];
     });
@@ -122,13 +123,15 @@ var startUp = function () { return __awaiter(void 0, void 0, void 0, function ()
                     }
                 });
                 log("**".concat(newFiles.length, "** new files found."));
-                if (newFiles.length > 0) {
-                    sendMessage("MediaServer New Files");
-                    combined = files.concat(newFiles);
-                    fs.writeFileSync("files.json", JSON.stringify(combined));
-                    convertNews();
-                }
-                return [2 /*return*/];
+                if (!(newFiles.length > 0)) return [3 /*break*/, 3];
+                return [4 /*yield*/, sendMessage("MediaServer New Files")];
+            case 2:
+                _a.sent();
+                combined = files.concat(newFiles);
+                fs.writeFileSync(files_location, JSON.stringify(combined));
+                convertNews();
+                _a.label = 3;
+            case 3: return [2 /*return*/];
         }
     });
 }); };
@@ -181,27 +184,29 @@ var convertNews = function () { return __awaiter(void 0, void 0, void 0, functio
 }); };
 var sendMessage = function (title, icon) {
     if (icon === void 0) { icon = 'video_camera'; }
-    fetch('https://ntfy.sh/55oarican_network', {
-        method: 'POST',
-        body: msgbody,
-        headers: {
-            'Title': title,
-            'Tags': icon,
-            'Markdown': 'yes'
-        }
-    }).then(function (res) { return __awaiter(void 0, void 0, void 0, function () {
-        var _a, _b;
+    return __awaiter(void 0, void 0, void 0, function () {
+        var res, _a, _b;
         return __generator(this, function (_c) {
             switch (_c.label) {
-                case 0:
+                case 0: return [4 /*yield*/, fetch('https://ntfy.sh/55oarican_network', {
+                        method: 'POST',
+                        body: msgbody,
+                        headers: {
+                            'Title': title,
+                            'Tags': icon,
+                            'Markdown': 'yes'
+                        }
+                    })];
+                case 1:
+                    res = _c.sent();
                     _b = (_a = console).log;
                     return [4 /*yield*/, res.text()];
-                case 1:
+                case 2:
                     _b.apply(_a, [_c.sent()]);
                     msgbody = "";
                     return [2 /*return*/];
             }
         });
-    }); });
+    });
 };
 startUp();
