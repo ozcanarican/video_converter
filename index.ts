@@ -1,9 +1,8 @@
 const { readdir } = require("node:fs/promises");
 import * as fs from 'fs';
 import * as path from "path"
-var exec = require('child_process').exec;
 import  {DateTime}  from "luxon";
-import { execSync } from 'child_process';
+import { exec, execSync } from 'child_process';
 
 //settings
 const videoFolder = "D:/multimedia"
@@ -81,7 +80,7 @@ const convertNews = async () => {
       let container = path.extname(file as string)
       let newfile = (path.basename(file as string)).replace(container,"") + ".mp4"
       let output = path.join(p,newfile)
-      let temp = path.join(p,"temp.mp4")
+      let temp = path.join(p,"temp.transcode")
       if(fs.existsSync(temp)) {
         fs.rmSync(temp)
       }
@@ -102,9 +101,9 @@ const convertNews = async () => {
       addToData(output)
       let fark = DateTime.now().diff(startTime)
       log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
-      sendMessage("MediaServer Transcode","file_folder")
     })
   )
+  await sendMessage("MediaServer Transcode","file_folder")
 }
 
 const sendMessage = async(title:string, icon:string='video_camera') => {

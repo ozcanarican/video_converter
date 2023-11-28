@@ -39,7 +39,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var readdir = require("node:fs/promises").readdir;
 var fs = require("fs");
 var path = require("path");
-var exec = require('child_process').exec;
 var luxon_1 = require("luxon");
 var child_process_1 = require("child_process");
 //settings
@@ -149,7 +148,7 @@ var convertNews = function () { return __awaiter(void 0, void 0, void 0, functio
                             container = path.extname(file);
                             newfile = (path.basename(file)).replace(container, "") + ".mp4";
                             output = path.join(p, newfile);
-                            temp = path.join(p, "temp.mp4");
+                            temp = path.join(p, "temp.transcode");
                             if (fs.existsSync(temp)) {
                                 fs.rmSync(temp);
                             }
@@ -172,11 +171,13 @@ var convertNews = function () { return __awaiter(void 0, void 0, void 0, functio
                             addToData(output);
                             fark = luxon_1.DateTime.now().diff(startTime);
                             log("Conversation has done for ".concat(newfile, " (").concat(fark.toFormat("mm:ss"), ")"));
-                            sendMessage("MediaServer Transcode", "file_folder");
                             return [2 /*return*/];
                         });
                     }); }))];
             case 1:
+                _a.sent();
+                return [4 /*yield*/, sendMessage("MediaServer Transcode", "file_folder")];
+            case 2:
                 _a.sent();
                 return [2 /*return*/];
         }
