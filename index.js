@@ -108,7 +108,7 @@ const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     if (newFiles.length > 0) {
         yield sendMessage("MediaServer Transcode", "file_folder");
         yield Promise.all(newFiles.map((file) => __awaiter(void 0, void 0, void 0, function* () {
-            return yield convert(file);
+            return convert(file);
         })));
     }
 });
