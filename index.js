@@ -87,6 +87,8 @@ function getFiles(dir) {
 const startUp = () => __awaiter(void 0, void 0, void 0, function* () {
     scannerDirs = [];
     scannedFiles = [];
+    newFiles = [];
+    index = 0;
     files = yield JSON.parse(fs.readFileSync(files_location, "utf-8"));
     log("Starting a scan");
     yield getFiles(videoFolder);
@@ -106,8 +108,8 @@ const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Conversation has been started");
     files = [...files, ...newFiles];
     fs.writeFileSync(files_location, JSON.stringify(files));
+    yield sendMessage("MediaServer Transcode", "file_folder");
     if (newFiles.length > 0) {
-        yield sendMessage("MediaServer Transcode", "file_folder");
         isRunning = true;
         convert();
     }
@@ -117,6 +119,7 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
         log("All proccess is done");
         yield sendMessage("MediaServer Transcode", "file_folder");
         isRunning = false;
+        startUp();
     }
     else {
         let file = newFiles[index];
@@ -138,6 +141,7 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
         let fark = luxon_1.DateTime.now().diff(startTime);
         log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
         yield sendMessage("MediaServer Transcode", "file_folder");
+        index++;
         convert();
     }
 });
