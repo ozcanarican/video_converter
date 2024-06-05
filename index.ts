@@ -81,17 +81,15 @@ const convertNews = async () => {
   files = [...files,...newFiles]
   fs.writeFileSync(files_location, JSON.stringify(files))
   if(newFiles.length > 0) {
+    await sendMessage("MediaServer Transcode","file_folder")
     await Promise.all(newFiles.map(async(file)=>{
-      return new Promise(async(resolve)=>{
-        await convert(file)
-        resolve(true)
-      })
+      return convert(file)
     }))
   }
 }
 
 
-const convert = async (file:string) => {
+const convert = async (file:string):Promise<void> => {
   let startTime = DateTime.now()
   log("Converting " + file)
   await sendMessage("MediaServer Transcode","file_folder")
@@ -109,7 +107,7 @@ const convert = async (file:string) => {
   fs.renameSync(temp, output)
   let fark = DateTime.now().diff(startTime)
   log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
-  await sendMessage("MediaServer Transcode","file_folder")
+  return await sendMessage("MediaServer Transcode","file_folder")
 }
 
 const sendMessage = async(title:string, icon:string='video_camera') => {
