@@ -130,6 +130,8 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
         let container = path.extname(file);
         let newfile = (path.basename(file)).replace(container, "") + ".mp4";
         let output = path.join(p, newfile);
+        files = [...files, output];
+        fs.writeFileSync(files_location, JSON.stringify(files));
         let temp = path.join(p, "temp.transcode");
         if (fs.existsSync(temp)) {
             fs.rmSync(temp);

@@ -105,6 +105,8 @@ const convert = async (): Promise<void> => {
     let container = path.extname(file as string)
     let newfile = (path.basename(file as string)).replace(container, "") + ".mp4"
     let output = path.join(p, newfile)
+    files = [...files, output]
+    fs.writeFileSync(files_location, JSON.stringify(files))
     let temp = path.join(p, "temp.transcode")
     if (fs.existsSync(temp)) {
       fs.rmSync(temp)
