@@ -53,6 +53,7 @@ let scannedFiles = [];
 let newFiles = [];
 let msgbody = "";
 let isRunning = false;
+let index = 0;
 const log = (msg) => {
     console.log(msg);
     msgbody += msg + "\n";
@@ -107,13 +108,18 @@ const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     fs.writeFileSync(files_location, JSON.stringify(files));
     if (newFiles.length > 0) {
         yield sendMessage("MediaServer Transcode", "file_folder");
-        yield Promise.all(newFiles.map((file) => __awaiter(void 0, void 0, void 0, function* () {
-            return convert(file);
-        })));
+        isRunning = true;
+        convert();
     }
 });
-const convert = (file) => __awaiter(void 0, void 0, void 0, function* () {
-    return new Promise((resolve) => __awaiter(void 0, void 0, void 0, function* () {
+const convert = () => __awaiter(void 0, void 0, void 0, function* () {
+    if (index >= files.length) {
+        log("All proccess is done");
+        yield sendMessage("MediaServer Transcode", "file_folder");
+        isRunning = false;
+    }
+    else {
+        let file = newFiles[index];
         let startTime = luxon_1.DateTime.now();
         log("Converting " + file);
         yield sendMessage("MediaServer Transcode", "file_folder");
@@ -132,8 +138,8 @@ const convert = (file) => __awaiter(void 0, void 0, void 0, function* () {
         let fark = luxon_1.DateTime.now().diff(startTime);
         log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
         yield sendMessage("MediaServer Transcode", "file_folder");
-        resolve();
-    }));
+        convert();
+    }
 });
 const sendMessage = (title_1, ...args_1) => __awaiter(void 0, [title_1, ...args_1], void 0, function* (title, icon = 'video_camera') {
     try {
