@@ -61,6 +61,8 @@ async function getFiles(dir: string) {
 const startUp = async () => {
   scannerDirs = []
   scannedFiles = []
+  newFiles = []
+  index = 0
   files = await JSON.parse(fs.readFileSync(files_location, "utf-8"))
   log("Starting a scan")
   await getFiles(videoFolder)
@@ -81,8 +83,8 @@ const convertNews = async () => {
   console.log("Conversation has been started")
   files = [...files, ...newFiles]
   fs.writeFileSync(files_location, JSON.stringify(files))
+  await sendMessage("MediaServer Transcode", "file_folder")
   if (newFiles.length > 0) {
-    await sendMessage("MediaServer Transcode", "file_folder")
     isRunning = true
     convert()
   }
@@ -93,6 +95,7 @@ const convert = async (): Promise<void> => {
     log("All proccess is done")
     await sendMessage("MediaServer Transcode", "file_folder")
     isRunning = false
+    startUp()
   } else {
     let file:string = newFiles[index]
     let startTime = DateTime.now()
@@ -113,6 +116,7 @@ const convert = async (): Promise<void> => {
     let fark = DateTime.now().diff(startTime)
     log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
     await sendMessage("MediaServer Transcode", "file_folder")
+    index++
     convert()
   }
 }
