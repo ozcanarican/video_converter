@@ -39,7 +39,7 @@ const child_process_1 = require("child_process");
 const luxon_1 = require("luxon");
 const express = require('express');
 //settings
-const videoFolder = "Z:/multimedia";
+const videoFolder = "/mnt/usb1/multimedia";
 let allowedType = [".mp4", ".webm", ".mkv", ".avi"];
 var isWin = process.platform === "win32";
 const deleteOldFile = false;
@@ -106,45 +106,51 @@ const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     files = [...files, ...newFiles];
     fs.writeFileSync(files_location, JSON.stringify(files));
     if (newFiles.length > 0) {
+        yield sendMessage("MediaServer Transcode", "file_folder");
         yield Promise.all(newFiles.map((file) => __awaiter(void 0, void 0, void 0, function* () {
-            return new Promise((resolve) => __awaiter(void 0, void 0, void 0, function* () {
-                yield convert(file);
-                resolve(true);
-            }));
+            return yield convert(file);
         })));
     }
 });
 const convert = (file) => __awaiter(void 0, void 0, void 0, function* () {
-    let startTime = luxon_1.DateTime.now();
-    log("Converting " + file);
-    yield sendMessage("MediaServer Transcode", "file_folder");
-    let p = path.dirname(file);
-    let container = path.extname(file);
-    let newfile = (path.basename(file)).replace(container, "") + ".mp4";
-    let output = path.join(p, newfile);
-    let temp = path.join(p, "temp.transcode");
-    if (fs.existsSync(temp)) {
-        fs.rmSync(temp);
-    }
-    let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
-    (0, child_process_1.execSync)(cmd);
-    fs.unlinkSync(file);
-    fs.renameSync(temp, output);
-    let fark = luxon_1.DateTime.now().diff(startTime);
-    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
-    yield sendMessage("MediaServer Transcode", "file_folder");
+    return new Promise((resolve) => __awaiter(void 0, void 0, void 0, function* () {
+        let startTime = luxon_1.DateTime.now();
+        log("Converting " + file);
+        yield sendMessage("MediaServer Transcode", "file_folder");
+        let p = path.dirname(file);
+        let container = path.extname(file);
+        let newfile = (path.basename(file)).replace(container, "") + ".mp4";
+        let output = path.join(p, newfile);
+        let temp = path.join(p, "temp.transcode");
+        if (fs.existsSync(temp)) {
+            fs.rmSync(temp);
+        }
+        let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
+        (0, child_process_1.execSync)(cmd);
+        fs.unlinkSync(file);
+        fs.renameSync(temp, output);
+        let fark = luxon_1.DateTime.now().diff(startTime);
+        log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
+        yield sendMessage("MediaServer Transcode", "file_folder");
+        resolve();
+    }));
 });
 const sendMessage = (title_1, ...args_1) => __awaiter(void 0, [title_1, ...args_1], void 0, function* (title, icon = 'video_camera') {
-    let res = yield fetch('https://ntfy.sh/55oarican_network', {
-        method: 'POST',
-        body: msgbody,
-        headers: {
-            'Title': title,
-            'Tags': icon,
-            'Markdown': 'yes'
-        }
-    });
-    console.log(yield res.text());
+    try {
+        let res = yield fetch('https://ntfy.sh/55oarican_network', {
+            method: 'POST',
+            body: msgbody,
+            headers: {
+                'Title': title,
+                'Tags': icon,
+                'Markdown': 'yes'
+            }
+        });
+        console.log(yield res.text());
+    }
+    catch (error) {
+        console.log("notification error", error);
+    }
     msgbody = "";
 });
 app.get("/", (req, res) => {
