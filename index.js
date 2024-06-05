@@ -36,9 +36,10 @@ const { readdir } = require("node:fs/promises");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
+const luxon_1 = require("luxon");
 const express = require('express');
 //settings
-const videoFolder = "D:/multimedia";
+const videoFolder = "Z:/multimedia";
 let allowedType = [".mp4", ".webm", ".mkv", ".avi"];
 var isWin = process.platform === "win32";
 const deleteOldFile = false;
@@ -52,7 +53,6 @@ let scannedFiles = [];
 let newFiles = [];
 let msgbody = "";
 let isRunning = false;
-let currentIndex = 0;
 const log = (msg) => {
     console.log(msg);
     msgbody += msg + "\n";
@@ -98,30 +98,43 @@ const startUp = () => __awaiter(void 0, void 0, void 0, function* () {
             }
         }
     });
-    if (newFiles.length > 0 && !isRunning) {
-        isRunning = true;
-        convertNews();
-        log(`**${newFiles.length}** new files found.`);
-    }
+    convertNews();
+    log(`**${newFiles.length}** new files found.`);
 });
 const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Conversation has been started");
-    if (currentIndex < newFiles.length) {
-        isRunning = true;
-        let file = newFiles[currentIndex];
-        currentIndex++;
-        let child = (0, child_process_1.exec)(`node C:\\Users\\ozcan\\video_converter\\converter.js "${file}"`);
-        child.on('close', function (code) {
-            files.push(file);
-            fs.writeFileSync(files_location, JSON.stringify(files));
-            convertNews();
-        });
-    }
-    else {
-        isRunning = false;
+    files = [...files, ...newFiles];
+    fs.writeFileSync(files_location, JSON.stringify(files));
+    if (newFiles.length > 0) {
+        yield Promise.all(newFiles.map((file) => __awaiter(void 0, void 0, void 0, function* () {
+            return new Promise((resolve) => __awaiter(void 0, void 0, void 0, function* () {
+                yield convert(file);
+                resolve(true);
+            }));
+        })));
     }
 });
-const sendMessage = (title, icon = 'video_camera') => __awaiter(void 0, void 0, void 0, function* () {
+const convert = (file) => __awaiter(void 0, void 0, void 0, function* () {
+    let startTime = luxon_1.DateTime.now();
+    log("Converting " + file);
+    yield sendMessage("MediaServer Transcode", "file_folder");
+    let p = path.dirname(file);
+    let container = path.extname(file);
+    let newfile = (path.basename(file)).replace(container, "") + ".mp4";
+    let output = path.join(p, newfile);
+    let temp = path.join(p, "temp.transcode");
+    if (fs.existsSync(temp)) {
+        fs.rmSync(temp);
+    }
+    let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
+    (0, child_process_1.execSync)(cmd);
+    fs.unlinkSync(file);
+    fs.renameSync(temp, output);
+    let fark = luxon_1.DateTime.now().diff(startTime);
+    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
+    yield sendMessage("MediaServer Transcode", "file_folder");
+});
+const sendMessage = (title_1, ...args_1) => __awaiter(void 0, [title_1, ...args_1], void 0, function* (title, icon = 'video_camera') {
     let res = yield fetch('https://ntfy.sh/55oarican_network', {
         method: 'POST',
         body: msgbody,
@@ -145,5 +158,5 @@ app.get("/", (req, res) => {
 });
 app.listen(port, () => {
     console.log("Listening port: " + port);
+    startUp();
 });
-//startUp()

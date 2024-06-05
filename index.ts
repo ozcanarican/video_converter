@@ -1,13 +1,14 @@
 const { readdir } = require("node:fs/promises");
 import * as fs from 'fs';
 import * as path from "path"
-import  {DateTime}  from "luxon";
-import { exec, execSync } from 'child_process';
 import { Request, Response } from 'express';
+import { randomBytes } from 'crypto';
+import { execSync } from 'child_process';
+import { DateTime } from 'luxon';
 const express = require('express')
 
 //settings
-const videoFolder = "D:/multimedia"
+const videoFolder = "Z:/multimedia"
 let allowedType = [".mp4",".webm",".mkv",".avi"]
 var isWin = process.platform === "win32";
 const deleteOldFile = false
@@ -22,7 +23,6 @@ let scannedFiles: string[] = []
 let newFiles: string[] = []
 let msgbody = "";
 let isRunning = false
-let currentIndex = 0
 
 
 const log = (msg: string) => {
@@ -72,29 +72,44 @@ const startUp = async () => {
       }
     }
   })
-  if(newFiles.length > 0 && !isRunning) {
-    isRunning = true
-    convertNews()
-    log(`**${newFiles.length}** new files found.`)
-  }
-  
+  convertNews()
+  log(`**${newFiles.length}** new files found.`)
 }
 
 const convertNews = async () => {
   console.log("Conversation has been started")
-  if(currentIndex < newFiles.length) {
-    isRunning = true
-    let file = newFiles[currentIndex]
-    currentIndex++;
-    let child = exec(`node C:\\Users\\ozcan\\video_converter\\converter.js "${file}"`)
-    child.on('close', function(code) {
-      files.push(file)
-      fs.writeFileSync(files_location, JSON.stringify(files))
-      convertNews()
-     });
-  } else {
-    isRunning = false
+  files = [...files,...newFiles]
+  fs.writeFileSync(files_location, JSON.stringify(files))
+  if(newFiles.length > 0) {
+    await Promise.all(newFiles.map(async(file)=>{
+      return new Promise(async(resolve)=>{
+        await convert(file)
+        resolve(true)
+      })
+    }))
   }
+}
+
+
+const convert = async (file:string) => {
+  let startTime = DateTime.now()
+  log("Converting " + file)
+  await sendMessage("MediaServer Transcode","file_folder")
+  let p = path.dirname(file as string)
+  let container = path.extname(file as string)
+  let newfile = (path.basename(file as string)).replace(container, "") + ".mp4"
+  let output = path.join(p, newfile)
+  let temp = path.join(p, "temp.transcode")
+  if (fs.existsSync(temp)) {
+      fs.rmSync(temp)
+  }
+  let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
+  execSync(cmd)
+  fs.unlinkSync(file as string);
+  fs.renameSync(temp, output)
+  let fark = DateTime.now().diff(startTime)
+  log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
+  await sendMessage("MediaServer Transcode","file_folder")
 }
 
 const sendMessage = async(title:string, icon:string='video_camera') => {
@@ -111,8 +126,6 @@ const sendMessage = async(title:string, icon:string='video_camera') => {
   msgbody = ""
 }
 
-
-
 app.get("/",(req:Request,res:Response)=>{
   if(!isRunning) {
     let kac = startUp()
@@ -124,5 +137,5 @@ app.get("/",(req:Request,res:Response)=>{
 })
 app.listen(port,()=>{
   console.log("Listening port: " + port)
+  startUp()
 })
-//startUp()
