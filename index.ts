@@ -148,6 +148,16 @@ app.get("/", (req: Request, res: Response) => {
   }
 
 })
+
+app.post("/", (req: Request, res: Response) => {
+  if (!isRunning) {
+    let kac = startUp()
+    res.send(`Started to scan`)
+  } else {
+    res.send("Already running")
+  }
+})
+
 app.listen(port, () => {
   console.log("Listening port: " + port)
   startUp()
