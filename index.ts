@@ -83,7 +83,7 @@ const convertNews = async () => {
   if (newFiles.length > 0) {
     await sendMessage("MediaServer Transcode", "file_folder")
     await Promise.all(newFiles.map(async (file) => {
-      return convert(file)
+      return await convert(file)
     }))
   }
 }
