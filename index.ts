@@ -8,17 +8,17 @@ import { DateTime } from 'luxon';
 const express = require('express')
 
 //settings
-const videoFolder = "Z:/multimedia"
-let allowedType = [".mp4",".webm",".mkv",".avi"]
+const videoFolder = "/mnt/usb1/multimedia"
+let allowedType = [".mp4", ".webm", ".mkv", ".avi"]
 var isWin = process.platform === "win32";
 const deleteOldFile = false
 const app = express()
 const port = 3333
 
 //variables
-let files_location = path.join(__dirname,'files.json')
+let files_location = path.join(__dirname, 'files.json')
 var files: string[] = require(files_location)
-let scannerDirs:string[] = []
+let scannerDirs: string[] = []
 let scannedFiles: string[] = []
 let newFiles: string[] = []
 let msgbody = "";
@@ -30,7 +30,7 @@ const log = (msg: string) => {
   msgbody += msg + "\n"
 }
 
-const addToData = async(file:string) => {
+const addToData = async (file: string) => {
   let filesData = JSON.parse(fs.readFileSync(files_location, 'utf8'));
   if (!filesData.includes(file)) {
     filesData.push(file)
@@ -40,7 +40,7 @@ const addToData = async(file:string) => {
 
 
 async function getFiles(dir: string) {
-  if(scannerDirs.includes(dir)) {
+  if (scannerDirs.includes(dir)) {
     return
   }
   scannerDirs.push(dir)
@@ -60,13 +60,13 @@ async function getFiles(dir: string) {
 const startUp = async () => {
   scannerDirs = []
   scannedFiles = []
-  files = await JSON.parse(fs.readFileSync(files_location,"utf-8"))
+  files = await JSON.parse(fs.readFileSync(files_location, "utf-8"))
   log("Starting a scan")
   await getFiles(videoFolder)
   log(`Scan has done with **${scannedFiles.length}** files.`)
   scannedFiles.map((file) => {
     if (!files.includes(file)) {
-      if(!newFiles.includes(file)) {
+      if (!newFiles.includes(file)) {
         log(`Feature task: ${file}`)
         newFiles.push(file)
       }
@@ -78,62 +78,69 @@ const startUp = async () => {
 
 const convertNews = async () => {
   console.log("Conversation has been started")
-  files = [...files,...newFiles]
+  files = [...files, ...newFiles]
   fs.writeFileSync(files_location, JSON.stringify(files))
-  if(newFiles.length > 0) {
-    await sendMessage("MediaServer Transcode","file_folder")
-    await Promise.all(newFiles.map(async(file)=>{
+  if (newFiles.length > 0) {
+    await sendMessage("MediaServer Transcode", "file_folder")
+    await Promise.all(newFiles.map(async (file) => {
       return convert(file)
     }))
   }
 }
 
 
-const convert = async (file:string):Promise<void> => {
-  let startTime = DateTime.now()
-  log("Converting " + file)
-  await sendMessage("MediaServer Transcode","file_folder")
-  let p = path.dirname(file as string)
-  let container = path.extname(file as string)
-  let newfile = (path.basename(file as string)).replace(container, "") + ".mp4"
-  let output = path.join(p, newfile)
-  let temp = path.join(p, "temp.transcode")
-  if (fs.existsSync(temp)) {
+const convert = async (file: string): Promise<void> => {
+  return new Promise(async (resolve) => {
+    let startTime = DateTime.now()
+    log("Converting " + file)
+    await sendMessage("MediaServer Transcode", "file_folder")
+    let p = path.dirname(file as string)
+    let container = path.extname(file as string)
+    let newfile = (path.basename(file as string)).replace(container, "") + ".mp4"
+    let output = path.join(p, newfile)
+    let temp = path.join(p, "temp.transcode")
+    if (fs.existsSync(temp)) {
       fs.rmSync(temp)
-  }
-  let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
-  execSync(cmd)
-  fs.unlinkSync(file as string);
-  fs.renameSync(temp, output)
-  let fark = DateTime.now().diff(startTime)
-  log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
-  return await sendMessage("MediaServer Transcode","file_folder")
+    }
+    let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
+    execSync(cmd)
+    fs.unlinkSync(file as string);
+    fs.renameSync(temp, output)
+    let fark = DateTime.now().diff(startTime)
+    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
+    await sendMessage("MediaServer Transcode", "file_folder")
+    resolve()
+  })
 }
 
-const sendMessage = async(title:string, icon:string='video_camera') => {
-  let res = await fetch('https://ntfy.sh/55oarican_network', {
-    method: 'POST',
-    body: msgbody,
-    headers: {
-      'Title': title,
-      'Tags': icon,
-      'Markdown': 'yes'
-    }
-  })
-  console.log(await res.text())
+const sendMessage = async (title: string, icon: string = 'video_camera') => {
+  try {
+    let res = await fetch('https://ntfy.sh/55oarican_network', {
+      method: 'POST',
+      body: msgbody,
+      headers: {
+        'Title': title,
+        'Tags': icon,
+        'Markdown': 'yes'
+      }
+    })
+    console.log(await res.text())
+  } catch (error) {
+    console.log("notification error", error)
+  }
   msgbody = ""
 }
 
-app.get("/",(req:Request,res:Response)=>{
-  if(!isRunning) {
+app.get("/", (req: Request, res: Response) => {
+  if (!isRunning) {
     let kac = startUp()
     res.send(`Started to scan`)
   } else {
     res.send("Already running")
   }
-  
+
 })
-app.listen(port,()=>{
+app.listen(port, () => {
   console.log("Listening port: " + port)
   startUp()
 })
