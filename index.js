@@ -111,7 +111,12 @@ const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     yield sendMessage("MediaServer Transcode", "file_folder");
     if (newFiles.length > 0) {
         isRunning = true;
-        convert();
+        try {
+            convert();
+        }
+        catch (error) {
+            console.log(error);
+        }
     }
 });
 const convert = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -123,26 +128,28 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     else {
         let file = newFiles[index];
-        let startTime = luxon_1.DateTime.now();
-        log("Converting " + file);
-        yield sendMessage("MediaServer Transcode", "file_folder");
-        let p = path.dirname(file);
-        let container = path.extname(file);
-        let newfile = (path.basename(file)).replace(container, "") + ".mp4";
-        let output = path.join(p, newfile);
-        files = [...files, output];
-        fs.writeFileSync(files_location, JSON.stringify(files));
-        let temp = path.join(p, "temp.transcode");
-        if (fs.existsSync(temp)) {
-            fs.rmSync(temp);
+        if (file) {
+            let startTime = luxon_1.DateTime.now();
+            log("Converting " + file);
+            yield sendMessage("MediaServer Transcode", "file_folder");
+            let p = path.dirname(file);
+            let container = path.extname(file);
+            let newfile = (path.basename(file)).replace(container, "") + ".mp4";
+            let output = path.join(p, newfile);
+            files = [...files, output];
+            fs.writeFileSync(files_location, JSON.stringify(files));
+            let temp = path.join(p, "temp.transcode");
+            if (fs.existsSync(temp)) {
+                fs.rmSync(temp);
+            }
+            let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
+            (0, child_process_1.execSync)(cmd, { stdio: "inherit" });
+            fs.unlinkSync(file);
+            fs.renameSync(temp, output);
+            let fark = luxon_1.DateTime.now().diff(startTime);
+            log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
+            yield sendMessage("MediaServer Transcode", "file_folder");
         }
-        let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
-        (0, child_process_1.execSync)(cmd, { stdio: "inherit" });
-        fs.unlinkSync(file);
-        fs.renameSync(temp, output);
-        let fark = luxon_1.DateTime.now().diff(startTime);
-        log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
-        yield sendMessage("MediaServer Transcode", "file_folder");
         index++;
         convert();
     }

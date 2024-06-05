@@ -86,38 +86,44 @@ const convertNews = async () => {
   await sendMessage("MediaServer Transcode", "file_folder")
   if (newFiles.length > 0) {
     isRunning = true
-    convert()
+    try {
+      convert()
+    } catch (error) {
+      console.log(error)
+    }
   }
 }
 
 const convert = async (): Promise<void> => {
-  if(index >= files.length) {
+  if (index >= files.length) {
     log("All proccess is done")
     await sendMessage("MediaServer Transcode", "file_folder")
     isRunning = false
     startUp()
   } else {
-    let file:string = newFiles[index]
-    let startTime = DateTime.now()
-    log("Converting " + file)
-    await sendMessage("MediaServer Transcode", "file_folder")
-    let p = path.dirname(file as string)
-    let container = path.extname(file as string)
-    let newfile = (path.basename(file as string)).replace(container, "") + ".mp4"
-    let output = path.join(p, newfile)
-    files = [...files, output]
-    fs.writeFileSync(files_location, JSON.stringify(files))
-    let temp = path.join(p, "temp.transcode")
-    if (fs.existsSync(temp)) {
-      fs.rmSync(temp)
+    let file: string = newFiles[index]
+    if (file) {
+      let startTime = DateTime.now()
+      log("Converting " + file)
+      await sendMessage("MediaServer Transcode", "file_folder")
+      let p = path.dirname(file as string)
+      let container = path.extname(file as string)
+      let newfile = (path.basename(file as string)).replace(container, "") + ".mp4"
+      let output = path.join(p, newfile)
+      files = [...files, output]
+      fs.writeFileSync(files_location, JSON.stringify(files))
+      let temp = path.join(p, "temp.transcode")
+      if (fs.existsSync(temp)) {
+        fs.rmSync(temp)
+      }
+      let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
+      execSync(cmd, { stdio: "inherit" })
+      fs.unlinkSync(file as string);
+      fs.renameSync(temp, output)
+      let fark = DateTime.now().diff(startTime)
+      log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
+      await sendMessage("MediaServer Transcode", "file_folder")
     }
-    let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
-    execSync(cmd, {stdio:"inherit"})
-    fs.unlinkSync(file as string);
-    fs.renameSync(temp, output)
-    let fark = DateTime.now().diff(startTime)
-    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`)
-    await sendMessage("MediaServer Transcode", "file_folder")
     index++
     convert()
   }
