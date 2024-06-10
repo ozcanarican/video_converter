@@ -108,21 +108,16 @@ const convertNews = () => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Conversation has been started");
     files = [...files, ...newFiles];
     fs.writeFileSync(files_location, JSON.stringify(files));
-    yield sendMessage("MediaServer Transcode", "file_folder");
+    sendMessage("MediaServer Transcode", "file_folder");
     if (newFiles.length > 0) {
         isRunning = true;
-        try {
-            convert();
-        }
-        catch (error) {
-            console.log(error);
-        }
+        convert();
     }
 });
 const convert = () => __awaiter(void 0, void 0, void 0, function* () {
     if (index >= files.length) {
         log("All proccess is done");
-        yield sendMessage("MediaServer Transcode", "file_folder");
+        sendMessage("MediaServer Transcode", "file_folder");
         isRunning = false;
         startUp();
     }
@@ -131,24 +126,29 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
         if (file) {
             let startTime = luxon_1.DateTime.now();
             log("Converting " + file);
-            yield sendMessage("MediaServer Transcode", "file_folder");
-            let p = path.dirname(file);
-            let container = path.extname(file);
-            let newfile = (path.basename(file)).replace(container, "") + ".mp4";
-            let output = path.join(p, newfile);
-            files = [...files, output];
-            fs.writeFileSync(files_location, JSON.stringify(files));
-            let temp = path.join(p, "temp.transcode");
-            if (fs.existsSync(temp)) {
-                fs.rmSync(temp);
+            sendMessage("MediaServer Transcode", "file_folder");
+            try {
+                let p = path.dirname(file);
+                let container = path.extname(file);
+                let newfile = (path.basename(file)).replace(container, "") + ".mp4";
+                let output = path.join(p, newfile);
+                files = [...files, output];
+                fs.writeFileSync(files_location, JSON.stringify(files));
+                let temp = path.join(p, "temp.transcode");
+                if (fs.existsSync(temp)) {
+                    fs.rmSync(temp);
+                }
+                let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
+                (0, child_process_1.execSync)(cmd, { stdio: "inherit" });
+                fs.unlinkSync(file);
+                fs.renameSync(temp, output);
+                let fark = luxon_1.DateTime.now().diff(startTime);
+                log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
+                sendMessage("MediaServer Transcode", "file_folder"); /*  */
             }
-            let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
-            (0, child_process_1.execSync)(cmd, { stdio: "inherit" });
-            fs.unlinkSync(file);
-            fs.renameSync(temp, output);
-            let fark = luxon_1.DateTime.now().diff(startTime);
-            log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
-            yield sendMessage("MediaServer Transcode", "file_folder");
+            catch (error) {
+                console.log(error);
+            }
         }
         index++;
         convert();
