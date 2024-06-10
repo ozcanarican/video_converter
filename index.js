@@ -139,19 +139,26 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
                     fs.rmSync(temp);
                 }
                 let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
-                (0, child_process_1.execSync)(cmd, { stdio: "inherit" });
-                fs.unlinkSync(file);
-                fs.renameSync(temp, output);
-                let fark = luxon_1.DateTime.now().diff(startTime);
-                log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
-                sendMessage("MediaServer Transcode", "file_folder"); /*  */
+                (0, child_process_1.exec)(cmd, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`exec error: ${error}`);
+                        return;
+                    }
+                    console.log(`stdout: ${stdout}`);
+                    console.log(`stderr: ${stderr}`);
+                    fs.unlinkSync(file);
+                    fs.renameSync(temp, output);
+                    let fark = luxon_1.DateTime.now().diff(startTime);
+                    log(`Conversation has done for ${newfile} (${fark.toFormat("mm:ss")})`);
+                    sendMessage("MediaServer Transcode", "file_folder"); /*  */
+                    index++;
+                    convert();
+                });
             }
             catch (error) {
                 console.log(error);
             }
         }
-        index++;
-        convert();
     }
 });
 const sendMessage = (title_1, ...args_1) => __awaiter(void 0, [title_1, ...args_1], void 0, function* (title, icon = 'video_camera') {
