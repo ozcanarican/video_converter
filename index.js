@@ -139,7 +139,7 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
                     fs.rmSync(temp);
                 }
                 let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
-                let process = (0, child_process_1.spawn)("HandBrakeCLI", ["-i", file, "-o", temp, "-e", "x264", "--preset", "Very Fast 1080p90"], { stdio: 'inherit' });
+                let process = (0, child_process_1.spawn)("HandBrakeCLI", ["-i", file, "-o", temp, "-e", "x264", "--preset", "'Very Fast 1080p90'"]);
                 process.on('close', function (code) {
                     fs.unlinkSync(file);
                     fs.renameSync(temp, output);
