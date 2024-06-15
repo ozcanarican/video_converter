@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from "path"
 import { Request, Response } from 'express';
 import { randomBytes } from 'crypto';
-import { execSync, exec } from 'child_process';
+import { execSync, exec, spawn } from 'child_process';
 import { DateTime } from 'luxon';
 const express = require('express')
 
@@ -114,13 +114,8 @@ const convert = async (): Promise<void> => {
           fs.rmSync(temp)
         }
         let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
-        exec(cmd, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`exec error: ${error}`);
-            return;
-          }
-          console.log(`stdout: ${stdout}`);
-          console.log(`stderr: ${stderr}`);
+        let process = spawn(cmd)
+        process.on('close', function (code) {
           fs.unlinkSync(file as string);
           fs.renameSync(temp, output)
           let fark = DateTime.now().diff(startTime)
@@ -128,7 +123,8 @@ const convert = async (): Promise<void> => {
           sendMessage("MediaServer Transcode", "file_folder")/*  */
           index++
           convert()
-        })
+        });
+
       } catch (error) {
         console.log(error)
       }

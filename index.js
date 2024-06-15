@@ -139,13 +139,8 @@ const convert = () => __awaiter(void 0, void 0, void 0, function* () {
                     fs.rmSync(temp);
                 }
                 let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`;
-                (0, child_process_1.exec)(cmd, (error, stdout, stderr) => {
-                    if (error) {
-                        console.error(`exec error: ${error}`);
-                        return;
-                    }
-                    console.log(`stdout: ${stdout}`);
-                    console.log(`stderr: ${stderr}`);
+                let process = (0, child_process_1.spawn)(cmd);
+                process.on('close', function (code) {
                     fs.unlinkSync(file);
                     fs.renameSync(temp, output);
                     let fark = luxon_1.DateTime.now().diff(startTime);
