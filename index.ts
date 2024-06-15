@@ -114,7 +114,7 @@ const convert = async (): Promise<void> => {
           fs.rmSync(temp)
         }
         let cmd = `HandBrakeCLI -i "${file}" -o "${temp}" -e x264 --preset "Very Fast 1080p30"`
-        let process = spawn(cmd)
+        let process = spawn("HandBrakeCLI", ["-i",file,"-o",temp,"-e","x264","--preset","Very Fast 1080p90"])
         process.on('close', function (code) {
           fs.unlinkSync(file as string);
           fs.renameSync(temp, output)
